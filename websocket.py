@@ -1,3 +1,4 @@
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import socket
@@ -15,7 +16,7 @@ class websocket:
 
     def __init__(self, s):
         self.s = s
-        
+    #发送二进制Blob    
     def write(self, data):
         l = len(data)
         if l < 126:
@@ -25,7 +26,30 @@ class websocket:
             hdr = struct.pack(">BBH", 0x82, 126, l)
         self.s.send(hdr)
         self.s.send(data)
-
+    #发送文本    
+    def send(self,msg,fin=True):    
+        msg=msg.encode('utf-8')
+        data = struct.pack('B', 129) if fin else struct.pack('B', 0)
+        msg_len = len(msg)
+        if msg_len <= 125:
+            data += struct.pack('B', msg_len)
+        elif msg_len <= (2**16 - 1):
+            data += struct.pack('!BH', 126, msg_len)
+        elif msg_len <= (2**64 - 1):
+            data += struct.pack('!BQ', 127, msg_len)
+        else:
+            # 分片传输超大内容（应该用不到）
+            while True:
+                fragment = msg[:(2**64 - 1)]
+                msg -= fragment
+                if msg > (2**64 - 1):
+                   self.s.send(fragment, False)
+                else:
+                    self.s.send(fragment)
+        data += bytes(msg)
+        print (data)
+        self.s.send(data)
+        
     def recvexactly(self, sz):
         res = b""
         while sz:
@@ -86,7 +110,6 @@ class websocket:
             res = ''.join(newdata)
             return res
             
-            
 if __name__ == "__main__":
   sock = socket.socket()
   sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -103,8 +126,11 @@ if __name__ == "__main__":
       ws = websocket(conn)
       print('websocket connect succ')
       # conn.send('hello friend')
+      ws.write("hello") #发送二进制
+      ws.send("hello") #发送文本
       while True:
           text = ws.read()
           if text =='':
               break
           print(text)  
+
