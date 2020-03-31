@@ -1,21 +1,30 @@
 
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import socket
-import websocket_helper
+import socket,network
+
 import sys
 import os
 try:
     import ustruct as struct
 except:
     import struct
+try:
+    import ubinascii as binascii
+except:
+    import binascii
+try:
+    import uhashlib as hashlib
+except:
+    import hashlib
     
 DEBUG = False
-
 class websocket:
-
     def __init__(self, s):
         self.s = s
+
+
     #发送二进制Blob    
     def write(self, data):
         l = len(data)
@@ -47,6 +56,7 @@ class websocket:
                 else:
                     self.s.send(fragment)
         data += bytes(msg)
+
         print (data)
         self.s.send(data)
         
@@ -59,13 +69,11 @@ class websocket:
             res += data
             sz -= len(data)
         return res
-
     def read(self):
         while True:
             hdr = self.recvexactly(2)
             assert len(hdr) == 2
             firstbyte, secondbyte = struct.unpack(">BB", hdr)
-
             mskenable =  True if secondbyte & 0x80 else False
             length = secondbyte & 0x7f
             if DEBUG:
@@ -110,27 +118,73 @@ class websocket:
             res = ''.join(newdata)
             return res
             
+    def server_handshake(self):
+        clr = self.s.makefile("rwb", 0)
+        l = clr.readline()
+        #sys.stdout.write(repr(l))
+        webkey = None
+        while 1:
+            l = clr.readline()
+            if not l:
+                raise OSError("EOF in headers")
+            if l == b"\r\n":
+                break
+        #    sys.stdout.write(l)
+            h, v = [x.strip() for x in l.split(b":", 1)]
+            if DEBUG:
+                print((h, v))
+            if h == b'Sec-WebSocket-Key':
+                webkey = v
+
+        if not webkey:
+            raise OSError("Not a websocket request")
+
+        if DEBUG:
+            print("Sec-WebSocket-Key:", webkey, len(webkey))
+
+        respkey = webkey + b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+        respkey = hashlib.sha1(respkey).digest()
+        respkey = binascii.b2a_base64(respkey)[:-1]
+
+        resp = b'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n' % respkey
+
+        if DEBUG:
+            print(resp)
+        self.s.send(resp)
+        
+    def client_handshake(self):
+        cl = self.s.makefile("rwb", 0)
+        cl.write(b'GET / HTTP/1.1\r\nHost: echo.websocket.org\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: foo\r\n\r\n')
+        l = cl.readline()
+    #    print(l)
+        while 1:
+            l = cl.readline()
+            if l == b"\r\n":
+                break
+    #        sys.stdout.write(l)  
+
+        
 if __name__ == "__main__":
   sock = socket.socket()
   sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  sock.bind(("0.0.0.0", 8008))
+  ip=network.WLAN(network.STA_IF).ifconfig()[0]
+  sock.bind((ip, 88))
   sock.listen(5)
-  print('websokcet listen at 8008...')
+  print('websokcet listen at %s:%s'%(ip,88))
   while True:
       # 这里阻塞接收客户端
       conn, address = sock.accept()
       # 接收到socket
       print('client connect...:')
-      print(address)
-      websocket_helper.server_handshake(conn)
-      ws = websocket(conn)
+      #初始化对象
+      ws=websocket(conn)
+      #开始握手
+      ws.server_handshake()
       print('websocket connect succ')
-      # conn.send('hello friend')
-      ws.write("hello") #发送二进制
-      ws.send("hello") #发送文本
       while True:
+          #ws.write("hello") #发送二进制
+          #ws.send("hello") #发送文本
           text = ws.read()
           if text =='':
               break
           print(text)  
-
