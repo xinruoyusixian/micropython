@@ -7,6 +7,7 @@
 
 
 
+
 #PWM 工作模板#
 #pwm0 = PWM(Pin(0))      # 通过Pin对象来创建PWM对象
 #pwm0.freq()             # 获得当前的PWM频率
@@ -21,13 +22,6 @@ import  urequests
 import network
 from machine import Pin, PWM ,RTC
 import time,dht,machine,ujson,ntptime
-def collect():
-      
-      TH=dht11(0)
-      print (TH[0],TH[1])
-      url="http://myxw94.cn/tools/t/?key=9527&th="+str(TH[0])+"-"+str(TH[1])
-      get(url)
-
 def ap(ssd,pwd='',active=1):
     
     ap= network.WLAN(network.AP_IF)
@@ -65,20 +59,17 @@ def bb(p,f=1000,d=250,t=0.5):
   '''
   蜂鸣器
   p: gpio ,w周期，m：脉宽
-
-
-
   '''
-
-
   pwm22 = PWM(Pin(p), freq=f, duty=d)
   time.sleep(t)
   pwm22.deinit()
 
 #测温度
-def dht11(pin):
-
-  d=dht.DHT11(machine.Pin(pin))
+def dhts(pin,dh=11):
+  if dh==11:
+    d=dht.DHT11(machine.Pin(pin))
+  if dh==22:
+    d=dht.DHT22(machine.Pin(pin))
   a=[]
   try:
       time.sleep(1)
@@ -108,9 +99,9 @@ def wifi(ssd,pwd):
             pass # WIFI没有连接上的话做点什么,这里默认pass啥也不做
     print('network config[网络信息]:', wifi0.ifconfig())
 
-##GPIO 操作
+#gpio 控制的引脚
 #st 引脚的值
-pin_s={}#保存PIN状态
+pin_s={}
 def pin(gpio=2,st=1):
     global pin_s
     if st==1:
@@ -125,6 +116,7 @@ def pin(gpio=2,st=1):
         except:
           pin_s[gpio]=0
           return 1
+       
 
 
 
