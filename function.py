@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 #PWM 工作模板#
 #pwm0 = PWM(Pin(0))      # 通过Pin对象来创建PWM对象
 #pwm0.freq()             # 获得当前的PWM频率
@@ -59,7 +49,12 @@ def bb(p,f=1000,d=250,t=0.5):
   '''
   蜂鸣器
   p: gpio ,w周期，m：脉宽
+
+
+
   '''
+
+
   pwm22 = PWM(Pin(p), freq=f, duty=d)
   time.sleep(t)
   pwm22.deinit()
@@ -91,9 +86,11 @@ def dhts(pin,dh=11):
 
 def wifi(ssd,pwd):
     wifi0 = network.WLAN(network.STA_IF)  #创建连接对象 如果让ESP32接入WIFI的话使用STA_IF模式,若以ESP32为热点,则使用AP模式
+    wifi0.active(True) #激活WIFI
+    wifi0.disconnect()
     if not wifi0.isconnected(): #判断WIFI连接状态
         print('connecting to network[正在连接]...')
-        wifi0.active(True) #激活WIFI
+        
         wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
         while not wifi0.isconnected():
             pass # WIFI没有连接上的话做点什么,这里默认pass啥也不做
