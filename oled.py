@@ -1,6 +1,13 @@
 
+
+
+
+import framebuf
 class oled:
-    def __init__(self,i2c):
+    def __init__(self,i2c,width=128,height=64):
+        self.buffer =  bytearray(((height // 8) * width) + 1)
+        self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
+        self.framebuf = framebuf.FrameBuffer1(memoryview(self.buffer)[1:], width, height)
         self.i2c = i2c
         self.ADDR = 0x3C
         cmd = [
@@ -42,6 +49,17 @@ class oled:
     def command(self,c):
         self.i2c.writeto(self.ADDR, b'\x00' + bytearray(c))
         
+    def fill(self,col):
+        self.framebuf.fill(col)
+        
+    def pixel(self,x, y, col):
+        self.framebuf.pixel(x, y, col)
+
+    def scroll(self, dx, dy):
+        self.framebuf.scroll(dx, dy)
+
+    def text(self,string, x, y, col=1):
+        self.framebuf.text(string, x, y, col)        
     def write(self,b):
       self.i2c.writeto(self.ADDR, b)
       # 一个十六进制 控制每一列向下的8个像素
@@ -50,15 +68,11 @@ class oled:
 
 
     def draw(self,arr,x,y):
-
-
         self.set([x,127,y,7])
-        print(x,y)
         for i in range(0,len(arr)):
             self.write(arr[i])
             y+=1 
             self.set([x,127,y,7])
-            print(x,y)
     def  fill(self,s,b=1000):
         p=0  
         while 1:
@@ -72,8 +86,10 @@ class oled:
            
 if __name__ == "__main__":
   from machine import Pin, I2C
-  i2c=I2C(scl=Pin(4), sda=Pin(5))
-  import time,font
+  i2c=I2C(scl=Pin(14), sda=Pin(27))
+  
+  import time,font,lib
+  lib.pin(12,1)
   from time import sleep
   num=font.num
   ch=font.ch
@@ -103,8 +119,8 @@ if __name__ == "__main__":
       x+=20
       draw(font[int(s[5:6])],x,0)
   while 1:
-    
-    th=lib.dhts(14,22)
+    '''
+    th=lib.dhts(22,22)
     t=str(th[0])
     h=str(th[1])    
     
@@ -128,7 +144,7 @@ if __name__ == "__main__":
     draw(num[10],90,4)
     draw(num[int(h[3])],95,4)
     draw(num[12],110,4)
-    
+'''
     sleep(1)
     t=time.localtime()
 
@@ -137,3 +153,5 @@ if __name__ == "__main__":
     display(t)
     
     sleep(1)
+
+
