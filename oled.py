@@ -72,6 +72,8 @@ class oled:
       h=8
       buffer= bytearray(((h // 8) * w) + 1)
       buffer[0] = 0x40  
+      #MONO_VLSB  控制一列向下8个 正向显示
+      #MONO_HLSB  控制一列向右8个 字体倒着显示
       fbuf = framebuf.FrameBuffer(memoryview(buffer)[1:], w, h, framebuf.MONO_VLSB)
       fbuf.text(s, 0, 0, 0xffff)
       print (buffer)
