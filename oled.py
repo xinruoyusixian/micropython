@@ -2,15 +2,16 @@
 
 
 
+
 import framebuf
 class oled:
-    def __init__(self,i2c,width=128,height=64):
+    def __init__(self,i2c,height=64,width=128):
         self.buffer =  bytearray(((height // 8) * width) + 1)
         self.buffer[0] = 0x40  # Set first byte of data buffer to Co=0, D/C=1
         self.framebuf = framebuf.FrameBuffer1(memoryview(self.buffer)[1:], width, height)
         self.i2c = i2c
         self.ADDR = 0x3C
-        cmd = [
+        cmd64= [
         [0xAE],                    # DISPLAYOFF
         [0xA4],           #显示恢复
         [0xD5, 0xF0],            # 设置显示时钟SETDISPLAYCLOCKDIV
@@ -30,6 +31,39 @@ class oled:
         [0xA6],                 # NORMALDISPLAY
         [0xd6, 0],  # zoom off
         ]
+        cmd32=[
+          [0xAE],        	# DISPLAYOFF
+          [0xD5],        	# SETDISPLAYCLOCKDIV
+          [0x80],        	# the suggested ratio 0x80
+          [0xA8],        	# SSD1306_SETMULTIPLEX
+          [0x1F],
+          [0xD3],        	# SETDISPLAYOFFSET
+          [0x00],         	# no offset
+          [0x40 | 0x0],  	# SETSTARTLINE
+          [0x8D],        	# CHARGEPUMP
+          [0x14],         #0x014 enable, 0x010 disable
+
+          [0x20],         #com pin HW config, sequential com pin config (bit 4), disable left/right remap (bit 5),
+          [0x00],         #128x64:0x00     128x32 : 0x02, or 128x32 OLED 0x12  
+          [0xa1],         #segment remap a0/a1
+          [0xc8],         #c0: scan dir normal, c8: reverse
+          [0xda],
+          [0x02],         #com pin HW config, sequential com pin config (bit 4), disable left/right remap (bit 5)
+          [0x81],
+          [0xcf],         #[2] set contrast control
+          [0xd9],
+          [0xf1],         #[2] pre-charge period 0x022/f1
+          [0xdb],
+          [0x40],         #vcomh deselect level
+
+          [0x2e],         #Disable scroll
+          [0xa4],         #output ram to display
+          [0xa6],         #none inverted normal display mode
+          [0xaf]        #display on
+            ]
+        cmd= cmd32 if(height==32) else cmd64
+        del cmd32
+        del cmd64
         for c in cmd:
             self.command(c)
         self.clear()
@@ -64,16 +98,32 @@ class oled:
       self.i2c.writeto(self.ADDR, b)
       # 一个十六进制 控制每一列向下的8个像素
       #i2c.writeto(ADDR, b'@0\x00\x00\x00\x000')
+
+
     
 
+
+
+
+
     def string(self,s):
+
+
       #在指定位置写入8*8的文字 会自动向后显示文字
+
+
       w=len(s)*8
+
+
       h=8
+
+
       buffer= bytearray(((h // 8) * w) + 1)
+
+
       buffer[0] = 0x40  
-      #MONO_VLSB  控制一列向下8个 正向显示
-      #MONO_HLSB  控制一列向右8个 字体倒着显示
+
+
       fbuf = framebuf.FrameBuffer(memoryview(buffer)[1:], w, h, framebuf.MONO_VLSB)
       fbuf.text(s, 0, 0, 0xffff)
       print (buffer)
@@ -100,6 +150,7 @@ class oled:
 if __name__ == "__main__":
   from machine import Pin, I2C
   i2c=I2C(scl=Pin(14), sda=Pin(27))
+
   
   font=[
   [
@@ -114,10 +165,20 @@ if __name__ == "__main__":
   [
   b"@\x00\x80\x80\x04\x0C\x18\x18\x80\x00\xF8\xF8\xC8\xC8\xC8\xC8\xC8\xC8\xC8\xFC\xFC\x00\x00\x00\x00",
   b"@\x00\x00\x01\x07\x87\xF8\x7F\x07\xE0\xEF\x2F\x25\xE5\xE5\x25\xE5\xE5\x25\x2F\xEF\xE0\x20\x00\x00",
+
+
   b"@\x00\x01\x01\x3F\x3F\x3F\x20\x20\x3F\x3F\x20\x20\x3F\x3F\x20\x3F\x3F\x20\x20\x3F\x3F\x30\x30\x20",#温
 
+
+
+
+
   ],
+
+
   [#太阳
+
+
   b"@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
   b"@\x00\x00\x00\x00\x00\x00\x00\x00\x0C\x0E\x1E\x7F\xFE\xF8\xF8\xF8\x70\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x81\x80\x80\x80\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xF0\xF8\xF8\xFC\xFE\x7F\x1E\x0C\x00\x00\x00\x00\x00\x00\x00\x00",
   b"@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x01\x00\x80\xC0\xE0\xF0\xF8\xFC\x7E\x3E\x3F\x1F\x1F\x0F\x0F\x0F\x07\x07\x07\x0F\x0F\x0F\x1F\x1F\x3F\x3E\x7E\xFC\xF8\xE0\xE0\xC0\x00\x00\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
@@ -129,14 +190,36 @@ if __name__ == "__main__":
 
   ]
 
+
+
   ]
+
+
+  #默认是高度为64的oled  如果是32的d=oled(i2c,32)
   d=oled(i2c)
 
+
+
+
+
   #清屏 可带参数清除指定区域 [0,127,0,8]  (0,127) 宽度,(0,8)是高度  1个高度是8像素 
+
+
   d.clear()
+
+
   d.draw(font[3],0,0)
+
+
   d.draw(font[2],65,0)
+
+
   d.draw(font[0],65,3)
+
+
+
   d.draw(font[1],90,3)
+
+
   d.clear([65,127,5,7]) #清除此区域 在此区域输出
   d.string("12345-=%as")
