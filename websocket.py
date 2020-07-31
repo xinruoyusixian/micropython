@@ -1,5 +1,13 @@
 
 
+
+
+
+
+
+
+
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import socket,network
@@ -20,7 +28,7 @@ except:
     import hashlib
     
 DEBUG = False
-class websocket:
+class _websocket:
     def __init__(self, s):
         self.s = s
 
@@ -63,15 +71,18 @@ class websocket:
     def recvexactly(self, sz):
         res = b""
         while sz:
+            
             data = self.s.recv(sz)
+            print(sz)
             if not data:
                 break
             res += data
             sz -= len(data)
         return res
     def read(self):
-        while True:
+        #while True: #禁用循环 带到外面自行循环
             hdr = self.recvexactly(2)
+            print (hdr)
             assert len(hdr) == 2
             firstbyte, secondbyte = struct.unpack(">BB", hdr)
             mskenable =  True if secondbyte & 0x80 else False
@@ -86,7 +97,8 @@ class websocket:
             if length == 127:
                 hdr = self.recvexactly(8)
                 assert len(hdr) == 8
-                (length,) = struct.unpack(">Q", hdr)
+     check: -1
+           (length,) = struct.unpack(">Q", hdr)
             if DEBUG:
                 print('length=%d' % length)
             opcode =  firstbyte & 0x0f
@@ -116,7 +128,8 @@ class websocket:
                 j = i % 4
                 newdata.append(chr(data[i] ^ msk[j]))
             res = ''.join(newdata)
-            return res
+            if res!='':
+                return res
             
     def server_handshake(self):
         clr = self.s.makefile("rwb", 0)
@@ -156,35 +169,65 @@ class websocket:
         cl = self.s.makefile("rwb", 0)
         cl.write(b'GET / HTTP/1.1\r\nHost: echo.websocket.org\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: foo\r\n\r\n')
         l = cl.readline()
-    #    print(l)
         while 1:
             l = cl.readline()
             if l == b"\r\n":
                 break
     #        sys.stdout.write(l)  
 
-        
-if __name__ == "__main__":
-  sock = socket.socket()
-  sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  ip=network.WLAN(network.STA_IF).ifconfig()[0]
-  sock.bind((ip, 88))
-  sock.listen(5)
-  print('websokcet listen at %s:%s'%(ip,88))
-  while True:
-      # 这里阻塞接收客户端
-      conn, address = sock.accept()
-      # 接收到socket
-      print('client connect...:')
-      #初始化对象
-      ws=websocket(conn)
-      #开始握手
-      ws.server_handshake()
-      print('websocket connect succ')
-      while True:
+  
+
+class websocket(_websocket):#继承_websocket
+  def __init__(self,port):
+      self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      ip=network.WLAN(network.STA_IF).ifconfig()[0]
+      self.sock.bind((ip, port))
+      self.sock.listen(5)
+      print('websokcet listen at %s:%s'%(ip,port))
+      self.is_open=0
+  def con(self):
+      if self.is_open==0:
+          conn, address = self.sock.accept()
+          # 接收到socket
+          if DEBUG:
+            print('[websocket]: client connect...:')
+          #初始化对象
+          super().__init__(conn)
+          #开始握手
+          super().server_handshake()
+          self.is_open=1
+          if DEBUG:
+            print('[websocket]: connect succ')
           #ws.write("hello") #发送二进制
           #ws.send("hello") #发送文本
-          text = ws.read()
-          if text =='':
-              break
-          print(text)  
+  def msg_ckeck(self,cb):    
+          self.con()
+          # cb 回调函数
+          # 这里阻塞接收客户端
+
+          try:
+            recv = super().read()
+
+            if (recv == '') or (recv == b''):
+                      self.is_open=0
+                      print ("close")
+                      self.con()
+            cb(recv)
+          except:
+            self.con()
+            return
+
+
+
+if __name__ == "__main__":
+    #DEBUG=1  
+    def cb(msg):
+       print("666",msg)
+       ws.send("sdssa 范德萨ssf")
+       
+    ws=websocket(88)
+    print("websocker")
+    while 1:
+        print("flag",ws.is_open)
+        ws.msg_ckeck(cb)
