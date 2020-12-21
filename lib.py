@@ -128,7 +128,17 @@ def pin(gpio=2,st=1):
        
 
 
-
+def time_add(t,add):
+    #t=[10,11,12] #时间加秒
+    _tmp=divmod(t[2]+add,60)
+    t[2]=_tmp[1]
+    if _tmp[0]>0:
+        t[1]+=_tmp[0]
+    if t[1]>=60:
+        _tmp=divmod(t[1],60)
+        t[1]=_tmp[1]
+        t[0]+=_tmp[0]
+    return t
 
 def update_time_http():
     URL="http://quan.suning.com/getSysTime.do"
