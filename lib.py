@@ -134,8 +134,9 @@ class timer:
       self.mode=self.tim.PERIODIC
 
   def run(self,cb):
+    #eg:lambda t:print("333333")
     self.tim.deinit()
-    self.tim.init(period=self.t,mode=self.mode,callback=lambda t:cb())
+    self.tim.init(period=self.t,mode=self.mode,callback=cb)
     
 def time_add(t,add):
     #t=[10,11,12] #时间加秒
