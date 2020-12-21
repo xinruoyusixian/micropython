@@ -22,7 +22,7 @@
 #上传温度
 import  urequests
 import network
-from machine import Pin, PWM ,RTC
+from machine import Pin, PWM ,RTC,Timer
 import time,dht,machine,ujson,ntptime
 def ap(ssd,pwd='',active=1):
     
@@ -127,7 +127,16 @@ def pin(gpio=2,st=1):
           return 1
        
 
+class timer:
+  def __init__(self,t=100):
+      self.tim=Timer(-1)
+      self.t=t
+      self.mode=self.tim.PERIODIC
 
+  def run(self,cb):
+    self.tim.deinit()
+    self.tim.init(period=self.t,mode=self.mode,callback=lambda t:cb())
+    
 def time_add(t,add):
     #t=[10,11,12] #时间加秒
     _tmp=divmod(t[2]+add,60)
