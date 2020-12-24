@@ -64,11 +64,9 @@ class  blinker:
       try:
         button=list(msg['data'].keys())[0]
         action=msg['data'][button]
-        button=[type,[button,action]]
+        button={'deviceType':type,'data':[button,action]}
       except:
-        button=[type,msg['data']]
-        print("==?",button)
-      #return [type,button]
+        button={'deviceType':type,'data':msg['data']}
       self.cb(tpc,button)
 
   #MQQT 连接    
@@ -166,4 +164,3 @@ class  blinker:
           log("文件不存在!")
           self.getInfo(self.key,self.devTpye)
           return  self.read_conf(self.blinker_path)
-
