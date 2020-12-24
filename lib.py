@@ -132,11 +132,16 @@ class timer:
       self.tim=Timer(-1)
       self.t=t
       self.mode=self.tim.PERIODIC
-
-  def run(self,cb):
-    #eg:lambda t:print("333333")
+  def timer(self,time):
+    self.time=time
     self.tim.deinit()
-    self.tim.init(period=self.t,mode=self.mode,callback=cb)
+    self.tim.init(period=self.t,mode=self.mode,callback=self._time_diff)
+
+  def _time_diff(self, args):
+    t=time.localtime()
+    t=[t[3],t[4],t[5]]
+    if t==self.time:
+      lib.pin(12,1)
     
 def time_add(t,add):
     #t=[10,11,12] #时间加秒
