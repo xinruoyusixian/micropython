@@ -1,5 +1,7 @@
+
 import socket,re,network
 from machine import Pin,lightsleep,reset,Timer
+
 def wifi_web():
   def getargs(s):
       q=s.find("?")
@@ -13,7 +15,7 @@ def wifi_web():
         data[tmp[0]]=tmp[1]
       return data
   tim = Timer(-1)
-  tim.init(period=100, mode=Timer.PERIODIC, callback=lambda t:exec('_led=Pin(2, Pin.OUT);_led( not _led.value())')) #周 期  
+  tim.init(period=100, mode=Timer.PERIODIC, callback=lambda t:exec('_led=Pin(2, Pin.OUT);_led( not _led.value());sta=network.WLAN(network.STA_IF);reset() if sta.isconnected() else 0  ')) #周 期  
   ap= network.WLAN(network.AP_IF)
   sta=network.WLAN(network.STA_IF)
   ap.active(1)
@@ -35,6 +37,8 @@ def wifi_web():
       print("=============================")
       result = re.search("(.*?) (.*?) HTTP/1.1", request)
       if result:
+        method = result.group(1)
+        method = result.group(1)
         method = result.group(1)
         url = result.group(2)
         print(method)
@@ -79,3 +83,9 @@ def wifi_web():
       print("no request")
     conn.close()
     print("out %s" % str(addr))
+
+
+
+
+
+
