@@ -160,14 +160,14 @@ def wifi(ssd='',pwd='',hostname="micropython"):
       # 启用mdns
       wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
       wifi0.disconnect()
-      if not wifi0.isconnected(): #判断WIFI连接状态
-          print('connecting to network[正在连接]...')
-          wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-          for i in range(0,10):
+      print('connecting to network[正在连接]...')
+      wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
+      for i in range(0,10):
               time.sleep(1)
-              if wifi0.isconnected:
+              if wifi0.isconnected():
+                print (wifi0.ifconfig())
                 return True
-              return False
+      return False
 
 
 #网络检测 
