@@ -51,7 +51,6 @@ def wifi_web():
           conn.sendall('<form action="wifi">SSD:<br><input type="text" name="ssd" value=""><br>PASSWORD<br><input type="text" name="pwd" value=""><br<br><input type="submit" value="Submit"></form> ')
           conn.sendall('<hr/>')
           for i in ap_list:
-            #conn.sendall("<tr><td>%s</td><td>%d</td><tr/>"%(i[0].decode(),i[3]))
             conn.sendall("%s ,%d<br/>"%(i[0].decode(),i[3]))
           #conn.sendall(html)
         if url.find("/wifi")!=-1:
@@ -64,14 +63,14 @@ def wifi_web():
             for i in range(0,10):
               lightsleep(1000)
               if sta.isconnected():
+                  conn.sendall("CONNECTED!<hr/> wating Restart")
+                  conn.send("\r\n")
+                  lightsleep(1000)
                   ap.active(0)
                   w_str='{"ssd":"%s","pwd":"%s"}'%(d.get("ssd"),d.get("pwd"))
                   fo = open(wifi_conf, "w")
                   fo.write(w_str)
                   fo.close()  
-                  conn.sendall("CONNECTED!<hr/> wating Restart")
-                  lightsleep(3000)
-                  conn.send("\r\n")
                   reset()
             conn.sendall("CONNECT FAILED<br/><button onclick='window.history.back()'>Back</button>")  
         conn.send("\r\n")  # 发送结束
@@ -81,8 +80,6 @@ def wifi_web():
     else:
       print("no request")
     conn.close()
-    #print("out %s" % str(addr))
-
 
 
 
