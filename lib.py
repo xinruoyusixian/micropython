@@ -163,10 +163,11 @@ def wifi(ssd='',pwd='',hostname="micropython"):
       if not wifi0.isconnected(): #判断WIFI连接状态
           print('connecting to network[正在连接]...')
           wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-          while not wifi0.isconnected():
-              return False # WIFI没有连接上的话做点什么,这里默认pass啥也不做
-      print('network config[网络信息]:', wifi0.ifconfig())
-      return True
+          for i in range(0,10):
+              time.sleep(1)
+              if wifi0.isconnected:
+                return True
+              return False
 
 
 #网络检测 
