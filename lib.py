@@ -164,8 +164,9 @@ def wifi(ssd='',pwd='',hostname="micropython"):
           print('connecting to network[正在连接]...')
           wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
           while not wifi0.isconnected():
-              pass # WIFI没有连接上的话做点什么,这里默认pass啥也不做
+              return False # WIFI没有连接上的话做点什么,这里默认pass啥也不做
       print('network config[网络信息]:', wifi0.ifconfig())
+      return True
 
 
 #网络检测 
