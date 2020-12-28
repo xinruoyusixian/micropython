@@ -5,7 +5,7 @@ import socket,re,network
 from machine import Pin,lightsleep,reset,Timer
 
 def wifi_web():
-  wifi_conf="wifi_conf.py"
+  wifi_conf="wifi_cfg.py"
   def getargs(s):
       q=s.find("?")
       if q ==-1 or s.find("=")==-1:
