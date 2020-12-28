@@ -1,1 +1,137 @@
-import machine,re,gc,os,ujson,utimefrom robust import MQTTClientfrom machine import Pin,UARTfrom urequests import get from utime import sleep import utime as time from lib import pin,update_time #全局变量pin(2,0)global c,subtopic,pubtopic,led_swdef send(s):    uart = UART(1, 38400)                 # init with given baudrate    uart.init(38400, bits=8, parity=None, stop=1)     uart.write(s) def getInfo(auth,type_="light"):    #获取信息    # 电灯"&miType=light"    #插座"&miType=outlet"    #多个插座"&miType=multi_outlet"    #传感器&miType=sensor"    #设置设备类型    host = 'https://iot.diandeng.tech'    url = '/api/v1/user/device/diy/auth?authKey=' + auth + "&miType="+type_+"&version=1.2.2"    print (host ,url)    data =  ujson.loads(get(host + url).text)        ''' deviceName = data['detail']['deviceName'] iotId =    data['detail']['iotId'] iotToken = data['detail']['iotToken']    productKey = data['detail']['productKey'] uuid =    data['detail']['uuid'] broker = data['detail']['broker']] '''    return datadef sub_cb(topic, msg):#回调函数，收到服务器消息后会调用这个函数#所以制模块的代码    print("[",utime.time(),"]Mqtt接收<<<<",msg)    msg=ujson.loads(msg)    msgs=str(msg)    if msgs.find("MIOT")!=-1:       MI(msg)    if msgs.find("fm-sw")!=-1:      if(pin(0,2)):          pin(0,0)          c.publish(pubtopic,playload({"fm-sw":{ "col":"#000000"}}) )      else:          pin(0,1)          c.publish(pubtopic,playload({"fm-sw":{ "col":"#99FF99"}}) )    #换频道    if (msgs.find("fm-fred")!=-1):       fm_res=send("AT+CHD")       c.publish(pubtopic,playload({"fre-text":{ "tex":"FRE:"+str(fm_res)}}) )    if (msgs.find("fm-freu")!=-1):       fm_res=send("AT+CHU")       c.publish(pubtopic,playload({"fre-text":{ "tex":"FRE:"+str(fm_res)}}) )        #调音量    if msgs.find("fm-vol")!=-1:       fm_res=send("AT+VOL="+str("%02d" % msg['data']['fm-vol']))    #搜台    if msgs.find("fm-search")!=-1:       resp=send("AT+SCAN")       c.publish(pubtopic,playload("Searching..."))    #APP心跳回复    c.publish(pubtopic,playload({"state":"online"}))#处理小爱响应def MI(msg):  try:    if(msg['data']['get']=="state"):      if devTpye=="sensor":        TH=dht11(17)        c.publish(pubtopic,playload({"temp":TH[0],"humi":TH[1], "pm25":"10","co2":"10"},toDevice="MIOT_r",deviceType="vAssistant"))        pass      if devTpye=="light":        pin_State= "True" if pin(21,2)==0 else "False"        c.publish(pubtopic,playload({"pState":pin_State,"col":0,"clr":0,"mode":0,"colTemp":"1000","bright":"1"},toDevice='MIOT_r',deviceType='vAssistant'))  except:    pass  #作为电灯时的操作  try:    if(msg['data']['set']['pState']==1):        pin(0,0)        print("开启")    if(msg['data']['set']['pState']==0):        pin(0,1)        print ("关闭")    #获取电源状态，操作完毕回复小爱    pin_State= "True" if pin(0,2)==0 else "False"    c.publish(pubtopic,playload({"pState":pin_State},toDevice='MIOT_r',deviceType='vAssistant'))  except:    pass  try:    vol=int(msg['data']['set']['bright'])*0.3    fm_res=send("AT+VOL="+str("%02d" % vol))    c.publish(pubtopic,playload({"bright":str(msg['data']['set']['bright'])},toDevice='MIOT_r',deviceType='vAssistant'))  except:    pass  print ("已回复小爱")key='60975280bf3e'# 电灯"light"#插座"outlet"#多个插座"multi_outlet"#传感器"sensor"#设置设备类型devTpye="light"info=  getInfo(key,type_=devTpye)update_time() #更新时间def playload(msg,toDevice=info['detail']['uuid'],deviceType='OwnApp'):   _data= ujson.dumps({   'fromDevice': info['detail']['deviceName'] ,   'toDevice':   toDevice,   'data':       msg ,   'deviceType': deviceType})   print ("[",utime.time(),"]Mqtt发送>>>>",_data)   return _data      SERVER = "public.iot-as-mqtt.cn-shanghai.aliyuncs.com"USER=info['detail']['iotId']PWD=info['detail']['iotToken']CLIENT_ID =  info['detail']['deviceName']c=MQTTClient(client_id=CLIENT_ID,server=SERVER,user=USER,password=PWD,keepalive=300)c.DEBUG = Truec.set_callback(sub_cb)subtopic="/"+info['detail']['productKey']+"/"+info['detail']['deviceName']+"/r"pubtopic=b"/"+info['detail']['productKey']+"/"+info['detail']['deviceName']+"/s"print("user:",USER,"CLIENT_ID:",CLIENT_ID,subtopic,"/r",pubtopic)if not c.connect(clean_session=False):      print("Ne session being set .")      c.subscribe(subtopic)c.publish(pubtopic,"System Started!")pin(2,1)while 1:    sleep(1)    c.check_msg()
+
+import machine,re,gc,os,ujson,utime,blinker,lib
+from machine import Pin,UART,Timer
+from utime import sleep 
+import utime as time 
+import web配网,lib,time,ujson
+
+try:
+    with open('wifi_conf.py', 'r+') as f:
+      json_data = ujson.load(f)
+      if not lib.wifi(json_data['ssd'],json_data['pwd']):
+        print ("连接失败！")
+        raise "连接失败！"
+
+except Exception as e:
+          web.wifi_web()
+
+
+
+
+
+lib.pin(2,0)
+def send(s):
+    uart = UART(1, 38400)                 # init with given baudrate
+    uart.init(38400, bits=8, parity=None, stop=1) 
+    print("send:",s)
+    uart.write(s) 
+def publish(msg):
+      mq.publish(msg)
+      
+def time_add(t,add):
+    #t=[10,11,12] #时间加秒
+    _tmp=divmod(t[2]+add,60)
+    t[2]=_tmp[1]
+    if _tmp[0]>0:
+        t[1]+=_tmp[0]
+    if t[1]>=60:
+        _tmp=divmod(t[1],60)
+        t[1]=_tmp[1]
+        t[0]+=_tmp[0]
+    return t
+
+def pin_sw(p):
+      try:
+        lib.pin_s[p]
+      except:
+        lib.pin_s[p]=0
+      if lib.pin_s[p]==1:
+        lib.pin(p,0)
+      else:
+        lib.pin(p,1)  
+def cb(topic, msg):
+        print("Mqtt REC<<<<",topic,msg)
+        msg=eval(str(msg)[2:-1]) 
+        try:
+            if(msg['data']['get']=='state'):
+              mq.onLine()
+              return
+              
+        except:
+          pass
+        
+        try:
+          if str(msg['data']).find("btn")>-1:
+              index=list(msg['data'].keys())[0]
+              print(index)
+              if index[4:]=='sw': 
+                  pin_sw(12)
+                  return
+              if msg['data'][index]=='tap':
+                  print("tap:",index)
+                  send(index[4:])
+                  
+          if str(msg['data']).find("ran-vol")>-1:
+                send("AT+VOL="+str("%02d" % msg['data']['ran-vol']))  
+                return 
+          if str(msg['data']).find("ran-timeout")>-1:
+                tim_sec=60*int(msg['data']['ran-timeout'])
+                t=time.localtime()
+                t=[t[3],t[4],t[5]]
+                t=time_add(t,tim_sec)
+                tim.timer(t)
+                mq.publish("Timeout: %s"%str(t))
+                return
+        except:
+          print("something")
+          return
+
+          
+
+
+#tim=Timer(-1)
+#tim.init(period=3000,mode=Timer.PERIODIC, callback=lambda t:print(0))
+
+class timer:
+  def __init__(self,t=500):
+      self.tim=Timer(-1)
+      self.t=t
+      self.mode=self.tim.PERIODIC
+  def timer(self,time):
+    self.time=time
+    self.tim.deinit()
+    self.tim.init(period=self.t,mode=self.mode,callback=self._time_diff)
+
+  def _time_diff(self, args):
+    t=time.localtime()
+    t=[t[3],t[4],t[5]]
+    if t==self.time:
+      lib.pin(12,0)
+
+  
+send("AT")
+tim=timer()
+
+lib.update_time()
+blinker.DEBUG=1
+mq=blinker.blinker("6cf52fc82da2",cb)
+mq.connect()
+while 1:
+    time.sleep_ms(100)
+    t=time.localtime()
+    if t[5]==0:
+      mq.ping()
+      time.sleep(1)
+    try:
+      mq.check_msg()
+    except:
+      pass
+
+
+
+
+
+
+
+
+
