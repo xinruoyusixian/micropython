@@ -1,8 +1,11 @@
 
+
+
 import socket,re,network
 from machine import Pin,lightsleep,reset,Timer
 
 def wifi_web():
+  wifi_conf="wifi_conf.py"
   def getargs(s):
       q=s.find("?")
       if q ==-1 or s.find("=")==-1:
@@ -15,7 +18,7 @@ def wifi_web():
         data[tmp[0]]=tmp[1]
       return data
   tim = Timer(-1)
-  tim.init(period=100, mode=Timer.PERIODIC, callback=lambda t:exec('_led=Pin(2, Pin.OUT);_led( not _led.value());sta=network.WLAN(network.STA_IF);reset() if sta.isconnected() else 0  ')) #周 期  
+  tim.init(period=100, mode=Timer.PERIODIC, callback=lambda t:exec('_led=Pin(2, Pin.OUT);_led( not _led.value()); ')) #周 期  
   ap= network.WLAN(network.AP_IF)
   sta=network.WLAN(network.STA_IF)
   ap.active(1)
@@ -33,17 +36,10 @@ def wifi_web():
     request = conn.recv(1024)                             #从套接字接收1024字节的数据
     if len(request)>0:
       request = request.decode()
-      print (request)
-      print("=============================")
       result = re.search("(.*?) (.*?) HTTP/1.1", request)
       if result:
-        method = result.group(1)
-        method = result.group(1)
-        method = result.group(1)
+        #method = result.group(1)
         url = result.group(2)
-        print(method)
-        print("URL:",url)
-        # /?wifi=22&dfz=23
         #conn.sendall("HTTP/1.1 200 OK\nConnection: close\nServer: Esp8266\nContent-Type: text/html;charset=UTF-8\n\n")
         conn.send("HTTP/1.1 200 OK\r\n")
         conn.send("Server: Esp8266\r\n")
@@ -52,7 +48,6 @@ def wifi_web():
         conn.send("\r\n")
         if url =="/":
           ap_list=sta.scan()
-          
           conn.sendall('<form action="wifi">SSD:<br><input type="text" name="ssd" value=""><br>PASSWORD<br><input type="text" name="pwd" value=""><br<br><input type="submit" value="Submit"></form> ')
           conn.sendall('<hr/>')
           for i in ap_list:
@@ -66,15 +61,19 @@ def wifi_web():
               print("connecting")
               sta.active(True)
               sta.connect(d.get("ssd"), d.get("pwd"))
+            for i in range(0,10):
               lightsleep(1000)
-            if sta.isconnected():
-              ap.active(0)
-              conn.sendall("CONNECTED!<hr/> wating Restart")
-              lightsleep(3000)
-              conn.send("\r\n")
-              reset()
-            else:
-              conn.sendall("CONNECT FAILED<br/><button onclick='window.history.back()'>Back</button>")  
+              if sta.isconnected():
+                  ap.active(0)
+                  w_str='{"ssd":"%s","pwd":"%s"}'%(d.get("ssd"),d.get("pwd"))
+                  fo = open(wifi_conf, "w")
+                  fo.write(w_str)
+                  fo.close()  
+                  conn.sendall("CONNECTED!<hr/> wating Restart")
+                  lightsleep(3000)
+                  conn.send("\r\n")
+                  reset()
+            conn.sendall("CONNECT FAILED<br/><button onclick='window.history.back()'>Back</button>")  
         conn.send("\r\n")  # 发送结束
       else:
         print("not found url")
@@ -82,7 +81,9 @@ def wifi_web():
     else:
       print("no request")
     conn.close()
-    print("out %s" % str(addr))
+    #print("out %s" % str(addr))
+
+
 
 
 
