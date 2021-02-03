@@ -20,6 +20,7 @@
 
 
 
+
 #PWM 工作模板#
 #pwm0 = PWM(Pin(0))      # 通过Pin对象来创建PWM对象
 #pwm0.freq()             # 获得当前的PWM频率
@@ -157,17 +158,23 @@ def wifi(ssd='',pwd='',hostname="micropython"):
       if ssd=='':
         return wifi0
       wifi0.active(True) #激活WIFI
-      # 启用mdns
-      wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
+      if sys.platform != "esp8266":
+        # 启用mdns
+        wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
+      else:
+        pass
+      
       wifi0.disconnect()
-      print('connecting to network[正在连接]...')
-      wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-      for i in range(0,10):
+      if not wifi0.isconnected(): #判断WIFI连接状态
+          print('connecting to network[正在连接]...')
+          wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
+          for i in range(0,10):
               time.sleep(1)
-              if wifi0.isconnected():
-                print (wifi0.ifconfig())
+              if wifi0.isconnected:
                 return True
-      return False
+              return False
+      
+      
 
 
 #网络检测 
@@ -211,5 +218,6 @@ class  _wifi:
     
   def info(self):
     return self.wifi0.ifconfig()
+
 
 
