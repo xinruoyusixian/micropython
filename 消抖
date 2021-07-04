@@ -1,0 +1,20 @@
+
+
+from machine import Pin
+import time
+
+
+c=0
+def click(d=4):
+  #按键消抖
+  global c
+  t=time.ticks_ms()-c
+  if t<400:
+    return
+  print("up",time.ticks_ms(),t)
+  c=time.ticks_ms()
+  
+
+
+btn=Pin(15,Pin.IN)
+btn.irq(handler=click,trigger=(Pin.IRQ_FALLING))
