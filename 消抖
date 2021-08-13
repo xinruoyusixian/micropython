@@ -3,7 +3,7 @@
 from machine import Pin
 import time
 
-
+#从3.3v接10K电阻到 Pin引脚
 c=0
 def click(d=4):
   #按键消抖
