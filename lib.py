@@ -35,19 +35,23 @@ import  urequests
 import network
 from machine import Pin, PWM ,RTC
 import time,dht,machine,ujson,ntptime,sys
-def ap(ssd,pwd='',active=1):
-    
-    ap= network.WLAN(network.AP_IF)
-    ap.active(active)
-    try:
-      if pwd=='':
-        ap.config(essid=ssd, authmode=network.AUTH_OPEN)
-        return "success!"
-      else:
-        ap.config(essid=ssd, authmode=network.AUTH_WPA_WPA2_PSK, password=pwd)
-        return "success!"
-    except Exception as e:
-      return str(e)
+def ap(ssd='',pwd=''):
+        ap= network.WLAN(network.AP_IF)
+        if ssd=='':
+            ap.active(0)
+            print("AP off")
+            return
+        ap.active(1)
+        try:
+          if pwd=='':
+            ap.config(essid=ssd, authmode=network.AUTH_OPEN)
+            return "success!"
+          else:
+            ap.config(essid=ssd, authmode=network.AUTH_WPA_WPA2_PSK, password=pwd)
+            return "success!"
+        except Exception as e:
+          return str(e)      
+          
 def pwm(pin,f,d,):
   pwm2 = PWM(Pin(pin), freq=f, duty=d)
 #呼吸灯 gpio 需要空的脚管 MAX 最大亮度等级 step 呼吸灯步长,越小越流畅 lev 亮度初始值
@@ -153,27 +157,27 @@ def update_time():
       print (rtc.datetime()) # get date and time
 
 ##WiFi链接模块    
-def wifi(ssd='',pwd='',hostname="micropython"):
-      wifi0 = network.WLAN(network.STA_IF)  #创建连接对象 如果让ESP32接入WIFI的话使用STA_IF模式,若以ESP32为热点,则使用AP模式   
-      if ssd=='':
-        return wifi0
-      wifi0.active(True) #激活WIFI
-      if sys.platform != "esp8266":
-        # 启用mdns
-        wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
-      else:
-        pass
-      
-      wifi0.disconnect()
-      if not wifi0.isconnected(): #判断WIFI连接状态
-          print('connecting to network[正在连接]...')
-          wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-          for i in range(0,10):
-              time.sleep(1)
-              if wifi0.isconnected:
-                return True
-              return False
-      
+def wifi(ssd='',pwd='',hostname="micropython",mode='client'):
+          wifi0 = network.WLAN(network.STA_IF)  #创建连接对象 如果让ESP32接入WIFI的话使用STA_IF模式,若以ESP32为热点,则使用AP模式   
+          if ssd=='':
+            return wifi0
+          wifi0.active(1) #激活WIFI
+          if sys.platform != "esp8266":
+            # 启用mdns
+            wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
+          else:
+            pass
+          wifi0.disconnect()
+          if not wifi0.isconnected(): #判断WIFI连接状态
+              print('connecting to network[正在连接]...')
+              wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
+              for i in range(0,10):
+                  time.sleep(1)
+                  if wifi0.isconnected:
+                    return True
+                  return False
+          return wifi0
+
       
 
 
@@ -218,6 +222,4 @@ class  _wifi:
     
   def info(self):
     return self.wifi0.ifconfig()
-
-
 
