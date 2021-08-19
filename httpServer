@@ -1,0 +1,70 @@
+
+import socket,re,network,os
+
+
+class http:
+  
+  def __init__(self,ip,port):
+    self.IP=ip
+    self.PORT=port
+    self.webserver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)    #创建套接字
+    self.webserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  #设置给定套接字选项的值
+    self.webserver.settimeout(2000)
+    self.webserver.bind((ip, port))                                       #绑定IP地址和端口号
+    self.webserver.listen(5)                                              #监听套接字
+    self.header="HTTP/1.1 200 OK\r\nServer: Esp8266\r\nContent-Type: text/html;charset=UTF-8\r\n"
+    print("服务器地址:%s:%d" %(ip,port))
+    
+    
+  def http(self,cb):    
+      self.conn, self.addr = self.webserver.accept() #接受一个连接，conn是一个新的socket对象
+      request = self.conn.recv(1024) #从套接字接收1024字节的数据
+      if len(request)>0:
+        request = request.decode()
+        result = re.search("(.*?) (.*?) HTTP/1.1", request)
+        if result:
+          method = result.group(1)
+          url = result.group(2)
+          print("URL:",url,"Method:",method) 
+          self.sendall(self.header)
+          self.conn.send("Connection: close\r\n")
+          self.conn.send("\r\n")
+          try:
+            cb(url)
+          except:
+            self.send("error")
+        self.send("\r\n")
+        self.conn.close() 
+        print("out %s" % str(self.IP))     
+  def send(self,s):
+    self.conn.send(s)
+  def sendall(self,s):
+    self.conn.sendall(s)    
+  def postArgs(self,s):
+      q=s.find("?")
+      if q ==-1 or s.find("=")==-1:
+        return  False
+      s=s[q+1:]
+      args=s.split("&")
+      data={}
+      for i in args:
+        tmp=i.split("=")
+        data[tmp[0]]=tmp[1]
+      return data
+      
+      
+
+def cb(u):
+  if u=="/12":
+    a.send("12")
+
+if __name__ == "__main__":
+  ap= network.WLAN(network.AP_IF)
+  ap.active(1)
+  ap.config(essid="ESP8266", authmode=network.AUTH_OPEN)
+  ip =ap.ifconfig()[0]
+  port = 80
+  a=http(ip,port)      
+while 1:
+  a.http(cb)
+  
