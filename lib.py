@@ -35,56 +35,95 @@ import  urequests
 import network
 from machine import Pin, PWM ,RTC
 import time,dht,machine,ujson,ntptime,sys
-def ap(ssd='',pwd=''):
-        ap= network.WLAN(network.AP_IF)
-        if ssd=='':
-            ap.active(0)
-            print("AP off")
-            return
-        ap.active(1)
+
+def ap(ssd,pwd=''):
+    AP= network.WLAN(network.AP_IF)
+    if ssd=='':
+      AP.active(0)
+      return (AP,True)
+    try:
+      AP.active(1)
+      AP.config(essid=ssd, authmode=network.AUTH_WPA_WPA2_PSK, password=pwd) if pwd != '' else AP.config(essid=ssd, authmode=network.AUTH_OPEN)
+      return (AP,True)
+    except Exception as e:
+      print (e)
+      return (AP,False)
+      
+def file(file,c=''):
+    if c=='':
+      try:
+        f=open(file,"r")
+        return f.read()
+      except Exception as e:
+        print(e,"文件不存在")
+        return False
+    else:
+      f=open(file,"w")
+      f.write(c)
+      f.flush()
+      f.close()
+      
+class flashLed:
+    def __init__(self,pin):
+      self.pin=Pin(pin,Pin.OUT)
+      self.delay=250
+      self._time1=time.ticks_ms()
+      self.period=1
+      self.freq=100
+      self.max=1022
+      self.duty=self.max      
+    def sw(self,s=2,delay=250):
+      if type(s).__name__=="Timer" or s==2:
+        if (time.ticks_ms()- self._time1)>self.delay:
+          self.delay= self.delay if delay==250  else delay
+          self.pin.value(0) if self.pin.value() else self.pin.value(1)
+          self._time1=time.ticks_ms()
+      if s==1:
+        self.pin.value(1)
+        return
+      if s==0:
+        self.pin.value(0)
+        return
+      if s=="":
+        return self.pin.value()        
+      
+    def flash(self,delay=250):
+        self.delay=delay
+        self.timer(self.sw)
+        return
+    def stop(self):
         try:
-          if pwd=='':
-            ap.config(essid=ssd, authmode=network.AUTH_OPEN)
-            return "success!"
-          else:
-            ap.config(essid=ssd, authmode=network.AUTH_WPA_WPA2_PSK, password=pwd)
-            return "success!"
-        except Exception as e:
-          return str(e)      
-          
-def pwm(pin,f,d,):
-  pwm2 = PWM(Pin(pin), freq=f, duty=d)
-#呼吸灯 gpio 需要空的脚管 MAX 最大亮度等级 step 呼吸灯步长,越小越流畅 lev 亮度初始值
-def Breathe(gpio=2,max=1000,step=10,lev=1):
- 
-    while True:
-        lev+=step
-        i=lev
-        if lev>max:
-            i=max*2-lev
-            if i<0:
-                break
-        time.sleep(0.01)
-        #print (i)
-        pwm2 = PWM(Pin(gpio), freq=100, duty=i)
+          self.tim.deinit()
+          del self.tim
+        except:
+          pass
+        try:
+          time.sleep_ms(50)
+          self.pwm.deinit()
+        except:
+          pass 
+        self.pin.init(Pin.OUT)
 
+        return
+    def timer(self,cb):
+        self.tim=Timer(-1)  
+        self.tim.init(period=self.period, mode=Timer.PERIODIC, callback=cb)
+    def bre(self,loop=1,step=1):
+        self.step=step
+        if loop==1:
+          self.stop()
+          self.timer(self.repat)
+        if loop==0:
+          self.repat()
+        return  
+    def repat(self,s=1):
+        self.pwm = PWM(self.pin)
+        self.duty=self.duty-self.step
+        if self.duty< -self.max:
+           self.duty=self.max
+        self.pwm.init(freq=self.freq, duty=abs(self.duty))
+        return
 
-    ##print (12)
-
-
-def bb(p,f=1000,d=250,t=0.5):
-  '''
-  蜂鸣器
-  p: gpio ,w周期，m：脉宽
-
-
-
-  '''
-
-
-  pwm22 = PWM(Pin(p), freq=f, duty=d)
-  time.sleep(t)
-  pwm22.deinit()
 
 #测温度
 def dhts(pin,dh=11):
@@ -106,28 +145,6 @@ def dhts(pin,dh=11):
        a=['err','err']
        pass
   return a
-
-
-#gpio 控制的引脚
-#st 引脚的值
-pin_s={}
-def pin(gpio=2,st=1):
-    global pin_s
-    if st==1:
-        Pin(gpio,Pin.OUT).value(1)
-        pin_s[gpio]=1
-    elif st==0:
-        Pin(gpio,Pin.OUT).value(0)
-        pin_s[gpio]=0
-    elif st==2:
-        try: 
-          return pin_s[gpio]
-        except:
-          pin_s[gpio]=0
-          return 1
-       
-
-
 
 
 def update_time_http():
@@ -156,27 +173,6 @@ def update_time():
       rtc.datetime((list[0], list[1], list[2] ,None,list[3], list[4], list[5] ,0)) 
       print (rtc.datetime()) # get date and time
 
-##WiFi链接模块    
-def wifi(ssd='',pwd='',hostname="micropython",mode='client'):
-          wifi0 = network.WLAN(network.STA_IF)  #创建连接对象 如果让ESP32接入WIFI的话使用STA_IF模式,若以ESP32为热点,则使用AP模式   
-          if ssd=='':
-            return wifi0
-          wifi0.active(1) #激活WIFI
-          if sys.platform != "esp8266":
-            # 启用mdns
-            wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
-          else:
-            pass
-          wifi0.disconnect()
-          if not wifi0.isconnected(): #判断WIFI连接状态
-              print('connecting to network[正在连接]...')
-              wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-              for i in range(0,10):
-                  time.sleep(1)
-                  if wifi0.isconnected:
-                    return True
-                  return False
-          return wifi0
 
       
 
