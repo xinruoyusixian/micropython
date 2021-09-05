@@ -1,9 +1,7 @@
-
 import socket,re,network,os
 
 
 class http:
-  
   def __init__(self,ip,port):
     self.IP=ip
     self.PORT=port
@@ -17,10 +15,13 @@ class http:
     
     
   def http(self,cb):    
-      self.conn, self.addr = self.webserver.accept() #接受一个连接，conn是一个新的socket对象
-      request = self.conn.recv(1024) #从套接字接收1024字节的数据
+      self.conn, self.addr = self.webserver.accept()
+      request = self.conn.recv(1024) 
+
       if len(request)>0:
+
         request = request.decode()
+
         result = re.search("(.*?) (.*?) HTTP/1.1", request)
         if result:
           method = result.group(1)
@@ -31,8 +32,8 @@ class http:
           self.conn.send("\r\n")
           try:
             cb(url)
-          except:
-            self.send("error")
+          except  Exception as e:
+            self.sendall(str(e))
         self.send("\r\n")
         self.conn.close() 
         print("out %s" % str(self.IP))     
@@ -40,7 +41,7 @@ class http:
     self.conn.send(s)
   def sendall(self,s):
     self.conn.sendall(s)    
-  def postArgs(self,s):
+  def get_Args(self,s):
       q=s.find("?")
       if q ==-1 or s.find("=")==-1:
         return  False
@@ -52,19 +53,4 @@ class http:
         data[tmp[0]]=tmp[1]
       return data
       
-      
 
-def cb(u):
-  if u=="/12":
-    a.send("12")
-
-if __name__ == "__main__":
-  ap= network.WLAN(network.AP_IF)
-  ap.active(1)
-  ap.config(essid="ESP8266", authmode=network.AUTH_OPEN)
-  ip =ap.ifconfig()[0]
-  port = 80
-  a=http(ip,port)      
-while 1:
-  a.http(cb)
-  
