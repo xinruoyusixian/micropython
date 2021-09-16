@@ -1,5 +1,6 @@
 
 
+
 import network
 from machine import Pin, PWM ,RTC,Timer
 import time,machine,ntptime,sys
@@ -140,42 +141,57 @@ class btn:
     self.cb_press=None
     self.cb_click=None
     self.cb_click2=None
-    #    
+    self.diffTime1=999
+    self.timeArr=[0,0]
 
   def FALLING(self,_e=0):
       self.timeFalling=self.time_ms()
+      self.timeArr.append(self.timeFalling)
       self.timeRising=0
       self.tim.init(period=1, mode=Timer.PERIODIC, callback=self.check) 
       self._btn.irq(handler=self.RISING,trigger=(Pin.IRQ_RISING))
       
-
+  def clickDely(self,_e=0):
+    self.diffTime1=self.time_ms()-self.clickRuntime
+    if self.diffTime1>300:
+      self.tim1.deinit()
+      print("click")
+      self.cb(self.cb_click)
+      
   def RISING(self,_e=0):
       self.timeRising=self.time_ms()
       self.tim.deinit()
       self._btn.irq(handler=self.FALLING,trigger=(Pin.IRQ_FALLING))
       diffTime=self.timeRising-self.timeFalling
       if diffTime > self.clickTimeMin and diffTime <self.pressTime :
-          print("click",diffTime)
-          if self.cb_click.__class__.__name__ != 'NoneType':
-            self.cb_click()
-          return 
-         
+          #click event delay, if you don't want to use doubleClick you can delete it,put click code at here
+          if self.diffTime1<300 and (self.time_ms()-self.timeArr[-2])<500:
+            self.tim1.deinit()
+            print("doubleClick")
+            self.cb(self.cb_click2)
+            return
+          self.clickRuntime=self.time_ms()
+          self.tim1=Timer(-998)
+          self.tim1.init(period=1, mode=Timer.PERIODIC, callback=self.clickDely) 
+
   def press(self,cb,s=0):
       self.cb_press=cb
       self.pressTime= self.pressTime if s==0 else s
       
   def click(self,cb):
       self.cb_click=cb
-
+      
+  def cb(self,cb):
+        if cb.__class__.__name__ != 'NoneType':
+           cb()  
+  def doubleClick(self,cb):
+      self.cb_click2=cb
   def check(self,_e=0):
       diffTime=self.time_ms()-self.timeFalling
-     
       if diffTime >= self.pressTime:
         print("press",diffTime)
         self.tim.deinit()
-        if self.cb_press.__class__.__name__ != 'NoneType':
-            self.cb_press()
-        return
+        self.cb(self.cb_press)
 
 
 
