@@ -120,8 +120,9 @@ def wifi(ssd='',pwd='',hostname="MicroPython"):
       if not wifi0.isconnected(): #判断WIFI连接状态
           print('[WIFI]:Connect to',ssd)
           wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-          while not wifi0.isconnected():
-            if (time.time()- _s_time)>5:
+          while (wifi0.ifconfig()[0]=="0.0.0.0"):
+            time.sleep(1)
+            if (time.time()- _s_time)>60:#60秒后失败
               print('[WIFI]:Connect Faied')
               return (wifi0,False)
     
