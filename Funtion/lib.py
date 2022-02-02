@@ -1,6 +1,8 @@
 
 
 
+
+
 import network
 from machine import Pin, PWM ,RTC,Timer
 import time,machine,ntptime,sys
@@ -44,16 +46,23 @@ class flashLed:
       if type(s).__name__=="Timer" or s==2:
         if (time.ticks_ms()- self._time1)>self.delay:
           self.delay= self.delay if delay==250  else delay
-          self.pin.value(0) if self.pin.value() else self.pin.value(1)
+          self.off() if self.value() else self.on()
           self._time1=time.ticks_ms()
       if s==1:
-        self.pin.value(1)
+        self.on()
         return
       if s==0:
-        self.pin.value(0)
+        self.off()
         return
       if s=="":
-        return self.pin.value()        
+        self.value()
+        
+    def value(self):
+      return self.pin.value()
+    def on(self):
+      self.pin.value(1)
+    def off(self):
+      self.pin.value(0)  
       
     def flash(self,delay=250):
         self.delay=delay
@@ -94,6 +103,7 @@ class flashLed:
 
 
 
+
 def update_time():
 
       ntptime.host='ntp1.aliyun.com'
@@ -117,12 +127,11 @@ def wifi(ssd='',pwd='',hostname="MicroPython"):
       wifi0.config(dhcp_hostname=hostname,mac=wifi0.config('mac'))
       wifi0.disconnect()
       _s_time=time.time()
-      if not wifi0.isconnected(): #判断WIFI连接状态
-          print('[WIFI]:Connect to',ssd)
-          wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
-          while (wifi0.ifconfig()[0]=="0.0.0.0"):
+      print('[WIFI]:Connect to',ssd)
+      wifi0.connect(ssd, pwd) #essid为WIFI名称,password为WIFI密码
+      while (wifi0.ifconfig()[0]=="0.0.0.0"):
             time.sleep(1)
-            if (time.time()- _s_time)>60:#60秒后失败
+            if (time.time()- _s_time)>60:
               print('[WIFI]:Connect Faied')
               return (wifi0,False)
     
@@ -132,67 +141,62 @@ def wifi(ssd='',pwd='',hostname="MicroPython"):
 class btn:
   
   def __init__(self,p):
-    self.time_ms=time.ticks_ms
+    self.time=0
     self._btn=Pin(p,Pin.IN)
+    self.diff_time=0
+    self.timer=-999
+    self.time_old=0 
+    self.press_time=400 #长按最小时间
+    self.click_time=80 #单击最小时间
+    self.double_click_time_min=250 #最小双击间隔
+    self.double_click_time_min=250 #最小双击间隔
+    self.diff_err_time=80  #误差时间
     self._btn.irq(handler=self.FALLING,trigger=(Pin.IRQ_FALLING))
-    self.tim=Timer(-999)
-    self.pressTime=500
-    self.clickTimeMin=80#单机最小时间
-    self.timeRising=0
+    tim=Timer(self.timer)     
+    tim.init(period=1, mode=Timer.PERIODIC, callback=self.check)     
     self.cb_press=None
     self.cb_click=None
-    self.cb_click2=None
-    self.diffTime1=999
-    self.timeArr=[0,0]
-
+  def isset(self,v): 
+   try : 
+     type (eval(v)) 
+   except : 
+     return  0 
+   else : 
+     return  1    
+     
   def FALLING(self,_e=0):
-      self.timeFalling=self.time_ms()
-      self.timeArr.append(self.timeFalling)
-      self.timeRising=0
-      self.tim.init(period=1, mode=Timer.PERIODIC, callback=self.check) 
+      self.time_old=self.time
+      self.time=time.ticks_ms()
       self._btn.irq(handler=self.RISING,trigger=(Pin.IRQ_RISING))
       
-  def clickDely(self,_e=0):
-    self.diffTime1=self.time_ms()-self.clickRuntime
-    if self.diffTime1>300:
-      self.tim1.deinit()
-      print("click")
-      self.cb(self.cb_click)
-      
-  def RISING(self,_e=0):
-      self.timeRising=self.time_ms()
-      self.tim.deinit()
-      self._btn.irq(handler=self.FALLING,trigger=(Pin.IRQ_FALLING))
-      diffTime=self.timeRising-self.timeFalling
-      if diffTime > self.clickTimeMin and diffTime <self.pressTime :
-          #click event delay, if you don't want to use doubleClick you can delete it,put click code at here
-          if self.diffTime1<300 and (self.time_ms()-self.timeArr[-2])<500:
-            self.tim1.deinit()
-            print("doubleClick")
-            self.cb(self.cb_click2)
-            return
-          self.clickRuntime=self.time_ms()
-          self.tim1=Timer(-998)
-          self.tim1.init(period=1, mode=Timer.PERIODIC, callback=self.clickDely) 
 
+  def RISING(self,_e=0):
+      tmp=time.ticks_ms()-self.time
+      if tmp<self.diff_err_time:
+        return
+      self.diff_time=tmp
+      self._btn.irq(handler=self.FALLING,trigger=(Pin.IRQ_FALLING))
+  
   def press(self,cb,s=0):
       self.cb_press=cb
-      self.pressTime= self.pressTime if s==0 else s
+      self.press_time= self.press_time if s==0 else s
       
-  def click(self,cb):
+  def click(self,cb,s=0):
       self.cb_click=cb
-      
-  def cb(self,cb):
-        if cb.__class__.__name__ != 'NoneType':
-           cb()  
-  def doubleClick(self,cb):
-      self.cb_click2=cb
+      self.press_time= self.press_time if s==0 else s  
   def check(self,_e=0):
-      diffTime=self.time_ms()-self.timeFalling
-      if diffTime >= self.pressTime:
-        print("press",diffTime)
-        self.tim.deinit()
-        self.cb(self.cb_press)
-
-
-
+    
+      if self.diff_time >self.press_time:
+        print("press")
+        if self.cb_press.__class__.__name__ != 'NoneType':
+          self.cb_press()
+        self.diff_time=0
+        
+        return
+ # 双击 暂未完成 dc=time.ticks_ms()-self.time_old
+     
+      if self.diff_time >self.click_time:
+        print("click")
+        if self.cb_click.__class__.__name__ != 'NoneType':
+          self.cb_click()
+        self.diff_time=0
