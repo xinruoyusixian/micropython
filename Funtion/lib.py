@@ -83,7 +83,12 @@ class flashLed:
 
         return
     def timer(self,cb):
-        self.tim=Timer(-1)  
+        tid=0;
+        if(sys.platform=="esp32"):
+          tid=0;
+        if(sys.platform=="esp8266"):  
+          tid=-1
+        self.tim=Timer(tid) #ESP32C3 (0-3)
         self.tim.init(period=self.period, mode=Timer.PERIODIC, callback=cb)
     def bre(self,loop=1,step=1):
         self.step=step
