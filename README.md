@@ -1,6 +1,10 @@
 # micropython
-micropython
+micropython 显示中文
+micropython 显示汉字
 
+
+ssd1306.py 这个是新修改的 可以显示字符画或者中文.测了一个用oled.py能画的字符画 这个内存不足.
+oled.py    这个也是ssd1306的驱动  不过是直接操作显存 不用framebuffer 很省内存.
 
  oled 0.91寸 初始化 
         cmd=[
